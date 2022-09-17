@@ -1,0 +1,44 @@
+﻿@inherits InputBase<string>
+
+<div class="form mb-3 width-1">
+    <label for="@_id">@Name</label>
+    @if (AddonText is null)
+    {
+        <input type="text"  id="@_id" @bind="CurrentValueAsString" class="form-control" disabled="@Disabled"/>
+    }
+    else
+    {
+        <div class="input-group mb-3">
+            <input type="text" step="1" id="@_id" @bind="CurrentValueAsString" class="form-control" disabled="@Disabled"/>
+            <span class="input-group-text" id="basic-addon2">@AddonText</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public string? Name { get; set; }
+    
+    [Parameter]
+    public bool Disabled { get; set; }
+    
+    [Parameter]
+    public string? AddonText { get; set; }
+
+    private readonly string _id = Guid.NewGuid().ToString();
+    
+    protected override bool TryParseValueFromString(string? value, out string result, out string? validationErrorMessage)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            result = CurrentValue ?? "Default";
+            validationErrorMessage = "Field cannot be null";
+            return false;
+        }
+        
+        result = value!;
+        validationErrorMessage = null;
+        return true;
+    }
+}

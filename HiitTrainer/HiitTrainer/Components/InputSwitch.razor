@@ -1,0 +1,30 @@
+﻿@inherits InputBase<bool>
+
+<div class="form-check form-switch">
+    @if (Disabled)
+    {
+        <input @bind="CurrentValue" class="form-check-input" type="checkbox" id="flexSwitchCheckDefault" disabled>
+    }
+    else
+    {
+        <input @bind="CurrentValue" class="form-check-input" type="checkbox" id="flexSwitchCheckDefault">
+    }
+    <label class="form-check-label" for="flexSwitchCheckDefault">@Text</label>
+</div>
+
+@code {
+
+
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = default!;
+
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    protected override bool TryParseValueFromString(string? value, out bool result, out string? validationErrorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+}

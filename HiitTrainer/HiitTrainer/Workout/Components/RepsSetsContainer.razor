@@ -1,0 +1,29 @@
+﻿@inherits ComponentBase
+
+<div>
+    <h6 class="d-inline">Rep @(Rep)/@(TotalReps)</h6>
+    <h6 class="text-start d-inline float-end">Set @(Set)/@(TotalSets)</h6>
+    @ChildContent
+</div>
+
+@code {
+
+    [Parameter, EditorRequired]
+    public int Rep { get; set; }
+
+    [Parameter, EditorRequired]
+    public int TotalReps { get; set; }
+
+    [Parameter, EditorRequired]
+    public int Set { get; set; }
+
+    [Parameter, EditorRequired]
+    public int TotalSets { get; set; }
+
+    [Parameter, EditorRequired]
+    public bool LastRep { get; set; }
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+}

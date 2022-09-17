@@ -1,0 +1,46 @@
+﻿@using HiitTrainer.Actions
+@using HiitTrainer.Data.Observerable
+
+@implements HiitTrainer.Data.Observerable.IObserver
+@implements IDisposable
+
+
+<EditForm Model="AdvancedSettings" OnValidSubmit="() => CookieIo.Write(AppSettings.CurrentProfile.Id, AdvancedSettings)">
+    <InputInt Name="Rep fail tolerance" Min="0" @bind-Value="AdvancedSettings.RepFailTolerance"/>
+    <div class="text-end">
+        <InputButton Class="btn btn-outline-primary" Text="Save Advanced Settings" ButtonType="submit"/>
+    </div>
+</EditForm>
+
+@code {
+
+    [Inject]
+    private ICookieIo CookieIo { get; set; } = default!;
+
+    [Inject]
+    private AppSettings AppSettings { get; set; } = default!;
+
+    [Inject]
+    private ProfileSubject ProfileSubject { get; set; } = default!;
+
+    private AdvancedSettings AdvancedSettings { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ProfileSubject.Attach(this);
+        await Update(ProfileSubject);
+    }
+
+    public async Task Update(ISubject subject)
+    {
+        var result = await CookieIo.Read<AdvancedSettings>(AppSettings.CurrentProfile.Id);
+        if (result.IsSuccess) AdvancedSettings = result.Value;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        ProfileSubject.Detach(this);
+    }
+
+}

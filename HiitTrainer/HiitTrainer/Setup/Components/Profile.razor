@@ -1,0 +1,66 @@
+﻿@using HiitTrainer.Actions
+@using HiitTrainer.Data.Observerable
+
+@implements HiitTrainer.Data.Observerable.IObserver
+@implements IDisposable
+
+<EditForm Model="ProfileSettings" OnValidSubmit="SaveData">
+    <h5>Name</h5>
+    <div class="d-flex gap">
+        <InputString Name="Profile" @bind-Value="AppSettings.CurrentProfile.Name"></InputString>
+        <InputString Name="Warmup" @bind-Value="ProfileSettings.WarmupName"></InputString>
+    </div>
+    <div class="d-flex gap">
+        <InputString Name="Exertion" @bind-Value="ProfileSettings.ExertionName"></InputString>
+        <InputString Name="Release" @bind-Value="ProfileSettings.ReleaseName"></InputString>
+    </div>
+    <div class="d-flex gap">
+        <InputString Name="Rest" @bind-Value="ProfileSettings.RestName"></InputString>
+        <InputString Name="Cooldown" @bind-Value="ProfileSettings.CoolDownName"></InputString>
+    </div>
+    <div class="d-flex gap">
+        <InputString Name="Rep fail" @bind-Value="ProfileSettings.RepFailName"></InputString>
+    </div>
+    <InfoAlert Text="Modify name settings if you want to rename an item to something more specific, like 'Exertion' to 'Run'"/>
+    <InputButton Class="btn btn-outline-primary" Text="Save Profile Settings" ButtonType="submit"/>
+</EditForm>
+
+@code {
+
+    [Inject]
+    private ICookieIo CookieIo { get; set; } = default!;
+
+    [Inject]
+    private ProfileSubject ProfileSubject { get; set; } = default!;
+
+    [Inject]
+    AppSettings AppSettings { get; set; } = default!;
+
+    private ProfileSettings ProfileSettings { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ProfileSubject.Attach(this);
+        await Update(ProfileSubject);
+    }
+
+    private async Task SaveData()
+    {
+        await CookieIo.Write(AppSettings.CurrentProfile.Id, ProfileSettings);
+        await CookieIo.UpdateProfileName(AppSettings.CurrentProfile);
+        await ProfileSubject.Notify();
+    }
+
+    public async Task Update(ISubject subject)
+    {
+        var result = await CookieIo.Read<ProfileSettings>(AppSettings.CurrentProfile.Id);
+        if (result.IsSuccess) ProfileSettings = result.Value;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        ProfileSubject.Detach(this);
+    }
+
+}

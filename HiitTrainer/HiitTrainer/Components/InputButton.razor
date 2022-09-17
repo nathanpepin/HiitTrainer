@@ -1,0 +1,28 @@
+﻿@if (Disabled)
+{
+    <button class="@Class" @onclick="OnClick" type="button" style="@Style;" disabled="disabled">@Text</button>
+}
+else
+{
+    <button class="@Class" @onclick="OnClick" type="@ButtonType" style="@Style;">@Text</button>
+}
+
+@code {
+    [Parameter] public string Class { get; set; } = "";
+
+    [Parameter]
+    public string Style { get; set; } = "";
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public string Text { get; set; } = "";
+
+    [Parameter]
+    public Action OnClick { get; set; } = default!;
+
+    [Parameter]
+    public string ButtonType { get; set; } = "button";
+
+}

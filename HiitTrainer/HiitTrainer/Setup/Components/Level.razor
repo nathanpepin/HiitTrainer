@@ -1,0 +1,72 @@
+﻿@using HiitTrainer.Actions
+@using HiitTrainer.Data.Observerable
+
+@implements HiitTrainer.Data.Observerable.IObserver
+@implements IDisposable
+
+<EditForm Model="LevelSettings" OnValidSubmit="() => CookieIo.Write(AppSettings.CurrentProfile.Id, LevelSettings)">
+    <InputSwitch Text="Edit level settings" @bind-Value="LevelSettings.EditLevel"/>
+
+    <InputInt Name="Level" Min="0" @bind-Value="LevelSettings.Level" Disabled="!LevelSettings.EditLevel"/>
+
+    <label>Progression type</label><br/>
+    <div class="ml-0">
+        <InputRadioGroup @bind-Value="LevelSettings.ProgressionType">
+            <InputRadio Value="ProgressionType.Percentage" disabled="@(!LevelSettings.EditLevel)"/> Percentage<br/>
+            <InputRadio Value="ProgressionType.Seconds" disabled="@(!LevelSettings.EditLevel)"/> Seconds<br/>
+        </InputRadioGroup>
+        <br/>
+    </div>
+
+    @if (LevelSettings.ProgressionType == ProgressionType.Percentage)
+    {
+        <InputInt Name="Progression increase" Min="0" @bind-Value="LevelSettings.ProgressionIncrease" Disabled="!LevelSettings.EditLevel" AddonText="%"/>
+    }
+    else
+    {
+        <InputTimeAmount Name="Progression increase" @bind-Value="LevelSettings.ProgressionIncrease" Disabled="!LevelSettings.EditLevel"/>
+    }
+
+    <InputTimeAmount Name="Starting exertion" @bind-Value="LevelSettings.StartingExertion" Disabled="!LevelSettings.EditLevel"/>
+    <InputTimeAmount Name="Starting release" @bind-Value="LevelSettings.StartingRelease" Disabled="!LevelSettings.EditLevel"/>
+    <InputTimeAmount Name="Additional exertion" @bind-Value="LevelSettings.AdditionalExertion" Disabled="!LevelSettings.EditLevel"/>
+    <InputTimeAmount Name="Additional release" @bind-Value="LevelSettings.AdditionalRelease" Disabled="!LevelSettings.EditLevel"/>
+
+    <InputSwitch Text="Increase release on failure" @bind-Value="LevelSettings.IncreaseReleaseOnFailure" Disabled="!LevelSettings.EditLevel"/>
+    <div class="text-end">
+        <InputButton Class="btn btn-outline-primary" Text="Save Level Settings" ButtonType="submit"/>
+    </div>
+</EditForm>
+
+@code {
+
+    [Inject]
+    private ICookieIo CookieIo { get; set; } = default!;
+
+    [Inject]
+    private AppSettings AppSettings { get; set; } = default!;
+
+    [Inject]
+    private ProfileSubject ProfileSubject { get; set; } = default!;
+
+    private LevelSettings LevelSettings { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ProfileSubject.Attach(this);
+        await Update(ProfileSubject);
+    }
+
+    public async Task Update(ISubject subject)
+    {
+        var result = await CookieIo.Read<LevelSettings>(AppSettings.CurrentProfile.Id);
+        if (result.IsSuccess) LevelSettings = result.Value;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        ProfileSubject.Detach(this);
+    }
+
+}

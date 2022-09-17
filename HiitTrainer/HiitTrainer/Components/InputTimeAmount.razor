@@ -1,0 +1,57 @@
+﻿@using Microsoft.VisualBasic
+@inherits InputBase<int>
+
+<div class="form mb-3 width-0">
+    <label for="@_id">@Name</label>
+    <div id="@_id" class="input-group mb-3 max-0">
+        <input step="1" min="0" max="59" type="number" class="form-control max-2" 
+               placeholder="Minutes" value="@_minutes" @onchange="MinutesOnChange" disabled="@Disabled">
+        <span class="input-group-text">M</span>
+        <input step="1" min="0" max="59" type="number" class="form-control max-2" 
+               placeholder="Seconds" value="@_seconds" @onchange="SecondOnChange" disabled="@Disabled">
+        <span class="input-group-text">S</span>
+    </div>
+</div>
+
+@code {
+
+    [Parameter, EditorRequired]
+    public string Name { get; set; }
+    
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    private int _minutes;
+    private int _seconds;
+
+    private readonly string _id = Guid.NewGuid().ToString();
+
+    private void MinutesOnChange(ChangeEventArgs args)
+    {
+        int.TryParse(args.Value?.ToString(), out _minutes);
+        CurrentValue = _seconds + (_minutes * 60);
+        StateHasChanged();
+    }
+
+    private void SecondOnChange(ChangeEventArgs args)
+    {
+        int.TryParse(args.Value?.ToString(), out _seconds);
+        CurrentValue = _seconds + (_minutes * 60);
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _minutes = CurrentValue / 60;
+        _seconds = CurrentValue % 60;
+        StateHasChanged();
+
+        await base.OnInitializedAsync();
+    }
+
+    protected override bool TryParseValueFromString(string? value, out int result, out string? validationErrorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+}

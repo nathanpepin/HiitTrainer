@@ -1,0 +1,184 @@
+﻿@using HiitTrainer.Data
+@using HiitTrainer.Actions
+@using System.Globalization
+@using HiitTrainer.Calculations
+@using HiitTrainer.Data.Observerable
+
+@implements HiitTrainer.Data.Observerable.IObserver
+@implements IDisposable
+
+<EditForm EditContext="ProfileEditContext">
+    @if (AppSettings.CurrentProfile is not null)
+    {
+        <InputDropDownList @bind-Value="AppSettings.CurrentProfile.Id"
+                           Ids="_profiles.Select(x => x.Id).ToList()"
+                           DropDownNames="_profiles.Select(x => x.Name).ToList()"
+                           Name="Selected Profile"
+                           UsePlaceHolder="false"/>
+    }
+    <InputButton Class="btn btn-outline-secondary" ButtonType="button" Text="Add Profile" OnClick="() => _addProfileDialog?.ShowDialog()"/>
+    @{
+        var disabled = AppSettings.CurrentProfile.Id < 1;
+        <InputButton OnClick="() => _removeProfileDialog?.ShowDialog()" Class="btn btn-outline-danger" ButtonType="button" Text="Remove Profile" Disabled="disabled"/>
+    }
+    <InputButton Text="Clear profile" OnClick="ClearProfile" Class="btn btn-outline-danger"/>
+
+    <button class="btn btn-info" @onclick="@(() => ToastService.ShowInfo("I'm an INFO message"))">Info Toast</button>
+
+    <ModalDialog
+        @ref="_addProfileDialog"
+        Title="Add Profile"
+        OnClose="() => _profileName = string.Empty"
+        OnOk="AddProfile">
+        <InputString @bind-Value="_profileName" Name="Profile name"/>
+    </ModalDialog>
+
+    <ModalDialog
+        @ref="_removeProfileDialog"
+        Title="Remove Profile"
+        OnClose="() => _profileName = string.Empty"
+        OnOk="RemoveProfile">
+        <p>Do you wish to remove the profile? This cannot be undone and all settings/logs will be lost.</p>
+    </ModalDialog>
+
+</EditForm>
+<hr/>
+<EditForm Model="GeneralSettings" OnValidSubmit="() => CookieIo.Write(AppSettings.CurrentProfile.Id, GeneralSettings)">
+    <InputSwitch Text="Turn off leveling system" @bind-Value="GeneralSettings.SetReleaseCooldownManually"/>
+
+    <InputTimeAmount Name="Workout length" @bind-Value="GeneralSettings.WorkoutLength"/>
+
+    <InputTimeAmount Name="Warmup" @bind-Value="GeneralSettings.Warmup"/>
+    <div class="d-flex gap">
+        <div class="form mb-3 max-0 width-1">
+            <label for="sets">Sets</label>
+            <input id="sets" type="number" value="@GeneralSettings.Sets" class="form-control" disabled="true"/>
+        </div>
+        <InputInt Name="Reps" Min="0" @bind-Value="GeneralSettings.Reps"/>
+    </div>
+
+    <InfoAlert Text="Total sets and the last set rep count will auto adjust to meet workout length"/>
+
+    <InputTimeAmount Name="Exertion" @bind-Value="GeneralSettings.Exertion" Disabled="!GeneralSettings.SetReleaseCooldownManually"/>
+    <InputTimeAmount Name="Release" @bind-Value="GeneralSettings.Release" Disabled="!GeneralSettings.SetReleaseCooldownManually"/>
+    <InputTimeAmount Name="Rest" @bind-Value="GeneralSettings.Rest"/>
+    <InputTimeAmount Name="Cooldown" @bind-Value="GeneralSettings.Cooldown"/>
+    <div class="text-end">
+        <InputButton Class="btn btn-outline-primary" Text="Save General Settings" ButtonType="submit"/>
+    </div>
+</EditForm>
+
+@code {
+
+    [Inject]
+    NavigationManager NavigationManager { get; set; } = default!;
+
+    [Inject]
+    private AppSettings AppSettings { get; set; } = default!;
+
+    [Inject]
+    private ICookieIo CookieIo { get; set; } = default!;
+
+    [Inject]
+    private ProfileSubject ProfileSubject { get; set; } = default!;
+
+    [Inject]
+    private IToastService ToastService { get; set; } = default!;
+
+    private EditContext ProfileEditContext { get; set; } = default!;
+
+    private ModalDialog? _addProfileDialog;
+
+    private ModalDialog? _removeProfileDialog;
+
+    private List<ProfileItem> _profiles = new();
+
+    private GeneralSettings GeneralSettings { get; set; } = new();
+
+    private string _profileName = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        ProfileSubject.Attach(this);
+
+        ProfileEditContext = new EditContext(AppSettings.CurrentProfile);
+        ProfileEditContext.OnFieldChanged += OnFieldChange!;
+
+        await Update(ProfileSubject);
+    }
+
+    public async Task Update(ISubject subject)
+    {
+        var result = await CookieIo.Read<GeneralSettings>(AppSettings.CurrentProfile.Id);
+        if (result.IsSuccess) GeneralSettings = result.Value;
+
+        var profileResult = await CookieIo.ReadProfiles();
+        if (profileResult.IsSuccess)
+        {
+            _profiles = profileResult.Value.ToList();
+        }
+
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        ProfileSubject.Detach(this);
+    }
+
+    private async void OnFieldChange(object sender, FieldChangedEventArgs e)
+    {
+        if (AppSettings.CurrentProfile is null) return;
+
+    //TODO: Handle cases of failure
+        var profileResult = await CookieIo.ReadProfile(AppSettings.CurrentProfile.Id);
+        if (profileResult.IsFailed) return;
+
+        AppSettings.CurrentProfile = profileResult.Value;
+        NavigationManager.NavigateTo($"Setup/{AppSettings.CurrentProfile.Id}");
+        await Update(ProfileSubject);
+
+        await ProfileSubject.Notify();
+
+        StateHasChanged();
+    }
+
+    private async Task AddProfile()
+    {
+        if (_profileName.Map(string.IsNullOrEmpty))
+        {
+            Console.WriteLine("Profile not added");
+            return;
+        }
+
+        var profileId = _profiles.Select(x => x.Id).Max() + 1;
+        var newProfile = new ProfileItem {Id = profileId, Name = _profileName};
+
+        _profiles.Add(newProfile);
+
+        await CookieIo.UpdateProfiles(_profiles);
+        Console.WriteLine("Profile added");
+    }
+
+    private async Task RemoveProfile()
+    {
+    //TODO: Maybe add condition where profile is 0 and snack bar
+
+        _profiles = _profiles.Where(x => x.Id != AppSettings.CurrentProfile.Id).ToList();
+        await CookieIo.UpdateProfiles(_profiles);
+        Console.WriteLine("Profile removed");
+
+        AppSettings.CurrentProfile.Id = 0;
+        NavigationManager.NavigateTo($"Setup/0");
+    }
+
+    private async void ClearProfile()
+    {
+        await CookieIo.Write(AppSettings.CurrentProfile.Id, new AdvancedSettings());
+        await CookieIo.Write(AppSettings.CurrentProfile.Id, new LevelSettings());
+        await CookieIo.Write(AppSettings.CurrentProfile.Id, new GeneralSettings());
+        await CookieIo.Write(AppSettings.CurrentProfile.Id, new ProfileSettings());
+        await ProfileSubject.Notify();
+    }
+
+}

@@ -1,0 +1,72 @@
+﻿@using System.Linq.Expressions
+@inherits InputBase<int>
+
+<div class="form-floating mb-3">
+    <select id="@_id" @bind="CurrentValue" class="form-control" >
+
+        @if (UsePlaceHolder)
+        {
+            <option value="-1">@PlaceHolder</option>
+        }
+        @foreach (var (x,i) in DropDownNames.Select((x, i) => (x, i)))
+        {
+            <option value="@Ids[i]">@x</option>
+        }
+    </select>
+    <label for="@_id">@Name</label>
+    @if (CurrentValue == -1)
+    {
+        <span style="color: red">Please select an input</span>
+    }
+</div>
+
+@code {
+
+    [Parameter]
+    public bool UsePlaceHolder { get; set; } = true;
+
+    [Parameter]
+    [EditorRequired]
+    public string? Name { get; set; }
+
+    [Parameter]
+    public string PlaceHolder { get; set; } = "Select an item";
+
+    [Parameter]
+    [EditorRequired]
+    public List<int> Ids { get; set; } = default!;
+
+    [Parameter]
+    [EditorRequired]
+    public List<string> DropDownNames { get; set; } = default!;
+
+    private readonly string _id = Guid.NewGuid().ToString();
+
+
+    protected override bool TryParseValueFromString(string? value, out int result, out string? validationErrorMessage)
+    {
+        if (!int.TryParse(value, out var converted))
+        {
+            result = -1;
+            validationErrorMessage = "Input is invalid";
+            return false;
+        }
+
+        var matchedItem = DropDownNames
+            .Select((x, i) => (x, i))
+            .FirstOrDefault(p => p.i == converted)
+            .x;
+
+        if (matchedItem is null)
+        {
+            result = -1;
+            validationErrorMessage = "Input is invalid";
+            return false;
+        }
+
+        result = converted;
+        validationErrorMessage = "";
+        return true;
+    }
+
+}

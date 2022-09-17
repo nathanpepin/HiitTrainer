@@ -1,0 +1,54 @@
+﻿@inherits InputBase<int>
+
+<div class="p-4" style="margin-left: @(MarginLeft)px">
+    <div>
+        <label class="form-label">
+            <i class="fas fa-thermometer-three-quarters text-danger" style="margin: 8px;">
+            </i>@Name
+        </label><label class="form-label float-end d-xxl-flex">@TotalTimeString</label>
+    </div>
+    <div class="progress">
+        <div class="progress-bar" aria-valuenow="@CurrentValue" aria-valuemin="0" aria-valuemax="100" style="width: @ProgressPercent;">
+            @CurrentTimeString
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter, EditorRequired]
+    public string Name { get; set; }
+
+    [Parameter, EditorRequired]
+    public int TotalTime { get; set; }
+    
+    [Parameter]
+    public int MarginLeft { get; set; }
+
+    private string TotalTimeString => GetTimeString(TotalTime);
+    private string CurrentTimeString => GetTimeString(CurrentValue);
+
+    private string GetTimeString(int time)
+    {
+        var minutes = time / 60;
+        var seconds = time % 60;
+        return $"{minutes}" +
+               $":{seconds.ToString().PadLeft(2, '0')}";
+    } 
+    
+    private string ProgressPercent
+    {
+        get
+        {
+            var division = decimal.Divide(CurrentValue, TotalTime) * 100;
+            var intValue = Convert.ToInt32(division);
+            return $"{intValue}%";
+        }
+    }
+
+    protected override bool TryParseValueFromString(string? value, out int result, out string? validationErrorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+}
